@@ -1,0 +1,6 @@
+{
+    "editor.formatOnPaste": true,
+    "editor.mouseWheelZoom": true,
+    "workbench.list.smoothScrolling": true,
+    "workbench.colorTheme": "Visual Studio Dark"
+}
