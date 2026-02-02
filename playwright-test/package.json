@@ -1,0 +1,30 @@
+{
+  "name": "playwright-test",
+  "version": "1.0.0",
+  "description": "A Playwright test set using typescript",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "test:failed": "npx playwright test --last-failed",
+    "test:inspect": "npx playwright test --debug",
+    "ui": "npx playwright test --ui",
+    "report": "npx playwright show-report",
+    "lint": "npx eslint ./src"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@playwright/test": "^1.50.1",
+    "@stylistic/eslint-plugin": "^4.1.0",
+    "@stylistic/eslint-plugin-ts": "^4.1.0",
+    "@types/node": "^22.13.8",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "date-fns": "^4.1.0",
+    "eslint": "^9.21.0",
+    "eslint-plugin-playwright": "^2.2.0",
+    "globals": "^16.0.0"
+  }
+}
