@@ -1,0 +1,313 @@
+{
+  "info": {
+    "name": "FanDuel-Style API Tests (Postman)",
+    "_postman_id": "b3b7a7dd-7b3d-4bf0-b4a4-111111111111",
+    "description": "Industry-standard API tests: smoke, functional CRUD flow, negative cases, state handling via environment variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level Pre-request Script",
+          "// Create a runId once per run for traceability",
+          "if (!pm.environment.get('runId')) {",
+          "  pm.environment.set('runId', `${Date.now()}-${Math.random().toString(16).slice(2)}`);",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-level Tests (applied to all requests)",
+          "pm.test('Response time < 2000ms', function () {",
+          "  pm.expect(pm.response.responseTime).to.be.below(2000);",
+          "});",
+          "",
+          "pm.test('Content-Type is JSON when body exists', function () {",
+          "  // Some APIs may return empty body on DELETE; handle both cases gracefully",
+          "  const hasBody = pm.response.text() && pm.response.text().trim().length > 0;",
+          "  if (hasBody) {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "  }",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Smoke",
+      "item": [
+        {
+          "name": "GET /items (smoke)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["items"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response is an array', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Array items have expected fields when present', function () {",
+                  "  const json = pm.response.json();",
+                  "  if (json.length > 0) {",
+                  "    pm.expect(json[0]).to.have.property('id');",
+                  "    pm.expect(json[0]).to.have.property('name');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 - Items CRUD (Stateful flow)",
+      "item": [
+        {
+          "name": "POST /items (create item)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"postman-item-{{runId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["items"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 (created) or 200 (some APIs)', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Response has id + name', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json).to.have.property('name');",
+                  "  pm.expect(json.name).to.include('postman-item');",
+                  "});",
+                  "",
+                  "// Save for later requests",
+                  "const created = pm.response.json();",
+                  "pm.environment.set('itemId', created.id);",
+                  "pm.test('Saved itemId to environment', function () {",
+                  "  pm.expect(pm.environment.get('itemId')).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /items/{{itemId}} (read item)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/items/{{itemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["items", "{{itemId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response matches requested id', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(String(json.id)).to.equal(String(pm.environment.get('itemId')));",
+                  "});",
+                  "",
+                  "pm.test('Response has name', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('name');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /items (verify created item appears in list)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["items"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Created itemId exists in list', function () {",
+                  "  const json = pm.response.json();",
+                  "  const itemId = String(pm.environment.get('itemId'));",
+                  "  const found = json.some(x => String(x.id) === itemId);",
+                  "  pm.expect(found, 'Expected created item to be in list').to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /items/{{itemId}} (cleanup)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/items/{{itemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["items", "{{itemId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200/204 (deleted)', function () {",
+                  "  pm.expect([200, 204]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "// Optional: clear env var to prevent accidental re-use",
+                  "pm.environment.unset('itemId');",
+                  "pm.test('itemId cleared from environment', function () {",
+                  "  pm.expect(pm.environment.get('itemId')).to.not.exist;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "90 - Negative",
+      "item": [
+        {
+          "name": "POST /items (missing name should fail)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invalid\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["items"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Different APIs return 400/422 for validation failures",
+                  "pm.test('Status is 400 or 422', function () {",
+                  "  pm.expect([400, 422]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Error response is structured (best effort)', function () {",
+                  "  const text = pm.response.text();",
+                  "  if (text && text.trim().length > 0) {",
+                  "    try {",
+                  "      const json = pm.response.json();",
+                  "      // Accept any of these common patterns",
+                  "      const hasKnownErrorField = json.error || json.message || json.errorMessages;",
+                  "      pm.expect(!!hasKnownErrorField).to.eql(true);",
+                  "    } catch (e) {",
+                  "      // If not JSON, still acceptable for some APIs; just ensure non-empty",
+                  "      pm.expect(text.length).to.be.above(0);",
+                  "    }",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /items/999999999 (non-existent should fail)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/items/999999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["items", "999999999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 404 (not found)', function () {",
+                  "  pm.expect([404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
